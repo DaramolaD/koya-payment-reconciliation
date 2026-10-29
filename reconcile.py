@@ -8,13 +8,24 @@ import json
 
 total = 0.0
 count = 0
+latest = {}
 
 with open("payments.jsonl") as f:
     for line in f:
-        event = json.loads(line)
-        if event["status"] == "success":
-            total += float(event["amount"])
-            count += 1
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if not event.get("txn_id"):
+            continue
+        seen = latest.get(event["txn_id"])
+        if seen is None or event["ts"] > seen["ts"]:
+            latest[event["txn_id"]] = event
+
+for event in latest.values():
+    if event["status"] == "success":
+        total += float(str(event["amount"]).replace(",", ""))
+        count += 1
 
 with open("expected.txt") as f:
     expected = int(f.read().strip())
